@@ -34,9 +34,16 @@ let db = p90edb_create()!
     p90edb_append_album(db, 1, 1, 1, data, len, encoding)
 }
 
-"demo-song".withBytes { (data_title, len_title, encoding_title) in
+"demo-song1".withBytes { (data_title, len_title, encoding_title) in
     "C:\\music\\demo1.wav".withBytes { (data_path, len_path, encoding_path) in
         p90edb_append_song(db, 1, 1, 1, 1, data_path, len_path, data_title, len_title, encoding_title)
+    }
+}
+
+"日本語-song2".withBytes { (data_title, len_title, encoding_title) in
+    let pathData = "C:\\music\\demo2.wav".data(using: .utf16LittleEndian)!
+    pathData.withUnsafeBytes { ptr in
+        p90edb_append_song(db, 1, 1, 1, 2, ptr, UInt8(pathData.count), data_title, len_title, encoding_title)
     }
 }
 

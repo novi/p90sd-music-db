@@ -32,6 +32,8 @@ p90edb_database* p90edb_create()
 
 void p90edb_finalize(p90edb_database* db)
 {
+    assert(db->current_chunk);
+    
     if (db->current_chunk) {
         p90edb_chunk_header* last_chunk = db->current_chunk;
         p90edb_finalize_chunk(db);
@@ -41,6 +43,13 @@ void p90edb_finalize(p90edb_database* db)
     }
     
     assert(db->file_header->file_size == 0);
+    
+    // append dummy
+    if (db->current_ptr < 1400) {
+        uint16_t dummy_len = 1536;
+        memset(&db->buffer[db->current_ptr], 0, dummy_len);
+        db->current_ptr += dummy_len;
+    }
     
     db->file_header->file_size = host_to_le32(db->current_ptr);
     db->file_header->unknown_magic = host_to_le16(0x9);
@@ -113,6 +122,18 @@ void p90edb_finalize_chunk(p90edb_database* db)
     db->current_chunk = NULL;
 }
 
+void p90edb_buffer_prepare_bytes(p90edb_database* db, uint16_t length)
+{
+    
+}
+
+void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t length)
+{
+    p90edb_buffer_prepare_bytes(db, length);
+    memcpy(&db->buffer[db->current_ptr], bytes, length);
+    db->current_ptr += length;
+}
+
 void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t is_truncate)
 {
     if (db->current_chunk == NULL) {
@@ -139,7 +160,7 @@ void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const ui
     }
     
     uint16_t record_length = ( 4 + (sizeof(uint32_t)*id_count) + data_len_field_size + data_length );
-    // truncate to multiply 4
+    // round to multiply 4
     if (is_truncate && record_length % 4 != 0) {
         record_length += 4 - (record_length % 4);
     }
@@ -209,42 +230,57 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     
     // append title
     
-    uint8_t title_data_len;
+    uint8_t title_len_field[10] = {0,0,0,0,0,0,0,0,0,0};
+    uint32_t file_path_record_len = db->current_ptr - record_head_ptr;
+
+    uint8_t title_len_field_size = 0;
+    uint16_t title_length_extra_len = 0;
     if (encoding == p90edb_data_encoding_ascii) {
         uint16_t len = title_length * 2 + 3;
         assert(len <= 255);
-        title_data_len = len;
+        title_len_field[0] = file_path_record_len + 1;
+        title_len_field[1] = len;
+        title_len_field_size = 2;
+        title_length_extra_len = 0;
     } else if (encoding == p90edb_data_encoding_utf16) {
+        uint32_t padding_size;
+        // align to multiply 4
+        if ( (file_path_record_len+1) % 4 != 0) {
+            padding_size = 4 - ( (file_path_record_len+1) % 4);
+        } else {
+            padding_size = 0;
+        }
+        if (title_length % 4 != 0) {
+            title_length_extra_len = 4 - ( title_length % 4);
+        }
         uint16_t len = title_length + 4;
         assert(len <= 255);
-        title_data_len = len;
+        title_len_field[padding_size+1] = 0x90;
+        title_len_field[padding_size+2] = len;
+        title_len_field_size = 1 + padding_size + 4;
+        title_len_field[0] = file_path_record_len + title_len_field_size;
     } else {
         assert(0);
     }
     
-    uint8_t title_len_field[2];
-    uint32_t file_path_record_len = db->current_ptr - record_head_ptr;
-    title_len_field[0] = file_path_record_len + 1;
-    title_len_field[1] = title_data_len;
-    
-    memcpy(&db->buffer[db->current_ptr], title_len_field, 2);
-    db->current_ptr += 2;
-    file_path_record_len += 2;
+    memcpy(&db->buffer[db->current_ptr], title_len_field, title_len_field_size);
+    db->current_ptr += title_len_field_size;
+    file_path_record_len += title_len_field_size;
     
     
     memcpy(&db->buffer[db->current_ptr], title, title_length);
     db->current_ptr += title_length;
     file_path_record_len += title_length;
     
-    // truncate multi 4
+    if (title_length_extra_len) {
+        memset(&db->buffer[db->current_ptr], 0, title_length_extra_len);
+        db->current_ptr += title_length_extra_len;
+    }
+    
+    // round to multiply 4
     if (file_path_record_len % 4 != 0) {
         uint8_t extra_len = 4 - (file_path_record_len % 4);
         memset(&db->buffer[db->current_ptr], 0, extra_len);
         db->current_ptr += extra_len;
     }
-    
-    // append dummy, TODO:
-    uint16_t dummy_len = 1536;
-    memset(&db->buffer[db->current_ptr], 0, dummy_len);
-    db->current_ptr += dummy_len;
 }
