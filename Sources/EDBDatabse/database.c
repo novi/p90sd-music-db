@@ -18,13 +18,12 @@ p90edb_database* p90edb_create()
     p90edb_database* db = malloc(sizeof(p90edb_database));
     db->buffer_size = sizeof(p90edb_file_header);
     db->buffer = malloc(db->buffer_size);
-    db->file_header = (void*)db->buffer;
-    db->file_header->chunk_count = 0;
-    db->file_header->file_size = 0; // 0 is not finalized yet
+    db->is_finalized = 0;
     db->current_ptr = sizeof(p90edb_file_header);
     db->record_seq = 0;
     db->current_record_count = 0;
-    db->current_chunk = NULL;
+    db->chunk_head_ptr = 0;
+    db->chunk_count = 0;
     assert(db->buffer);
     
     return db;
@@ -38,13 +37,6 @@ void p90edb_buffer_prepare_bytes(p90edb_database* db, uint16_t length)
     uint32_t desired_size = db->current_ptr+(length*2);
     db->buffer = realloc(db->buffer, desired_size);
     assert(db->buffer);
-    
-    // update pointer
-    db->file_header = (void*)db->buffer;
-    if (db->current_chunk) {
-        // TODO: convert to method
-        db->current_chunk = (void*)&db->buffer[db->chunk_head_ptr];
-    }
     db->buffer_size = desired_size;
 }
 
@@ -55,19 +47,24 @@ void p90edb_buffer_padding_zero(p90edb_database* db, uint16_t length)
     db->current_ptr += length;
 }
 
+p90edb_chunk_header* p90edb_get_current_chunk(p90edb_database* db)
+{
+    return (void*)&db->buffer[db->chunk_head_ptr];
+}
+
 void p90edb_finalize(p90edb_database* db)
 {
-    assert(db->current_chunk);
+    assert(db->chunk_head_ptr);
     
-    if (db->current_chunk) {
-        p90edb_chunk_header* last_chunk = db->current_chunk;
+    if (db->chunk_head_ptr) {
+        p90edb_chunk_header* last_chunk = p90edb_get_current_chunk(db);
         p90edb_finalize_chunk(db);
         
         // update last chunk size
         last_chunk->last_chunk_size = db->current_ptr - db->chunk_head_ptr;
     }
     
-    assert(db->file_header->file_size == 0);
+    assert(db->is_finalized == 0);
     
     // append dummy
     if (db->current_ptr < 1400) {
@@ -75,27 +72,27 @@ void p90edb_finalize(p90edb_database* db)
         p90edb_buffer_padding_zero(db, dummy_len);
     }
     
-    db->file_header->file_size = host_to_le32(db->current_ptr);
-    db->file_header->unknown_magic = host_to_le16(0x9);
-    db->file_header->unknown2 = 0;
+    p90edb_file_header* header = (void*)db->buffer;
+    
+    header->file_size = host_to_le32(db->current_ptr);
+    header->unknown_magic = host_to_le16(0x9);
+    header->unknown2 = 0;
+    header->record_count = host_to_le32(db->record_count_in_database);
+    header->chunk_count = host_to_le32(db->chunk_count);
+    
+    db->is_finalized = 1;
 }
 
 uint32_t p90edb_get_file_size(p90edb_database* db)
 {
-    assert(db->file_header->file_size);
+    assert(db->is_finalized);
     
-    return db->file_header->file_size;
-}
-
-void p90edb_write_to_buffer(p90edb_database* db, void* dst)
-{
-    assert(db->file_header->file_size);
-    memcpy(dst, db->buffer, db->file_header->file_size);
+    return db->current_ptr;
 }
 
 void* p90edb_get_file_buffer(p90edb_database* db)
 {
-    assert(db->file_header->file_size);
+    assert(db->is_finalized);
     return db->buffer;
 }
 
@@ -110,42 +107,45 @@ void p90edb_destroy(p90edb_database** db)
 
 void p90edb_start_chunk(p90edb_database* db)
 {
-    assert(db->current_chunk == NULL);
+    assert(db->chunk_head_ptr == 0);
     
-    db->current_chunk = (void*)&db->buffer[db->current_ptr]; // fixed size chunk
+    // fixed size chunk
     db->chunk_head_ptr = db->current_ptr;
     
     p90edb_buffer_prepare_bytes(db, sizeof(p90edb_chunk_header));
     db->current_ptr += sizeof(p90edb_chunk_header);
     db->current_record_count = 0;
+    p90edb_chunk_header* chunk_header = p90edb_get_current_chunk(db);
     for (uint32_t i = 0; i < RECORD_COUNT_IN_CHUNK; i++) {
-        db->current_chunk->record_offset[i] = 0;
+        chunk_header->record_offset[i] = 0;
     }
-    db->file_header->chunk_count += 1;
+    db->chunk_count += 1;
 }
 
 void p90edb_finalize_chunk(p90edb_database* db)
 {
-    assert(db->current_chunk);
+    assert(db->chunk_head_ptr);
     assert(db->current_record_count > 0);
     
-    uint32_t prev_chunk_count = db->file_header->chunk_count - 1;
+    p90edb_chunk_header* chunk_header = p90edb_get_current_chunk(db);
+    
+    uint32_t prev_chunk_count = db->chunk_count - 1;
     
     //uint8_t chunk_header_valid_size = ( 4 * 9 /* chunk header without record offset*/ ) + db->current_record_count*2;
     uint8_t chunk_header_valid_size = 0xa4;
     uint8_t chunk_seq = ((prev_chunk_count * 2) + 4 ) % 0xff;
-    db->current_chunk->chunk_header_size_seq = host_to_le32( (chunk_header_valid_size << 0) | (chunk_seq << 8) );
+    chunk_header->chunk_header_size_seq = host_to_le32( (chunk_header_valid_size << 0) | (chunk_seq << 8) );
     // TODO:
-    db->current_chunk->record_count_offset = host_to_le32( (db->current_record_count) );
-    db->current_chunk->id = host_to_le32(prev_chunk_count * 4);
-    db->current_chunk->unknown_record_count_in_chunk = host_to_le32( (db->current_record_count << 16) );
-    db->current_chunk->last_chunk_size = 0;
-    db->current_chunk->unknown_mask1 = host_to_le32(0xffffffff);
-    db->current_chunk->unknown3 = host_to_le32(0);
-    db->current_chunk->unknown_mask2 = host_to_le32(0x88888888);
-    db->current_chunk->unknown4 = host_to_le32(0);
+    chunk_header->record_count_offset = host_to_le32( (db->current_record_count) );
+    chunk_header->id = host_to_le32(prev_chunk_count * 4);
+    chunk_header->unknown_record_count_in_chunk = host_to_le32( (db->current_record_count << 16) );
+    chunk_header->last_chunk_size = 0;
+    chunk_header->unknown_mask1 = host_to_le32(0xffffffff);
+    chunk_header->unknown3 = host_to_le32(0);
+    chunk_header->unknown_mask2 = host_to_le32(0x88888888);
+    chunk_header->unknown4 = host_to_le32(0);
     
-    db->current_chunk = NULL;
+    db->chunk_head_ptr = 0;
 }
 
 void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t length)
@@ -157,7 +157,11 @@ void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t
 
 void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t should_truncate)
 {
-    if (db->current_chunk == NULL) {
+    if (db->current_record_count >= RECORD_COUNT_IN_CHUNK) {
+        p90edb_finalize_chunk(db); // finalize current chunk, new chunk will start
+    }
+    
+    if (db->chunk_head_ptr == 0) {
         p90edb_start_chunk(db);
     }
     
@@ -204,9 +208,10 @@ void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const ui
     memcpy(data_ptr, data, data_length);
     
     // fill record offset in chunk
-    db->current_chunk->record_offset[db->current_record_count] = db->current_ptr - db->chunk_head_ptr;
+    p90edb_chunk_header* chunk_header = p90edb_get_current_chunk(db);
+    chunk_header->record_offset[db->current_record_count] = host_to_le16(db->current_ptr - db->chunk_head_ptr);
     db->current_record_count += 1;
-    db->file_header->record_count += 1;
+    db->record_count_in_database += 1;
     
     db->current_ptr += record_length;
 }

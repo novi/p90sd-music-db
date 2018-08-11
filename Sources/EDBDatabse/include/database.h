@@ -10,6 +10,8 @@ typedef enum {
     p90edb_data_encoding_utf16 = 1
 } p90edb_data_encoding;
 
+// TODO: describe edb structures
+
 typedef struct {
     uint32_t chunk_count;
     uint32_t record_count;
@@ -39,15 +41,16 @@ typedef struct {
 } p90edb_record_header;
 
 typedef struct {
-    p90edb_file_header* file_header;
     uint8_t* buffer;
     uint32_t buffer_size;
-    //uint32_t file_size;
+    
+    uint8_t is_finalized;
+    uint32_t chunk_count;
+    uint32_t record_count_in_database;
     
     uint32_t current_ptr;
-    uint32_t chunk_head_ptr;
     
-    p90edb_chunk_header* current_chunk;
+    uint32_t chunk_head_ptr;
     uint16_t current_record_count; // in current chunk
     
     uint32_t record_seq;
