@@ -16,7 +16,7 @@ void p90edb_finalize_chunk(p90edb_database* db);
 p90edb_database* p90edb_create()
 {
     p90edb_database* db = malloc(sizeof(p90edb_database));
-    db->buffer_size = 0xfffff; // TODO: size
+    db->buffer_size = sizeof(p90edb_file_header);
     db->buffer = malloc(db->buffer_size);
     db->file_header = (void*)db->buffer;
     db->file_header->chunk_count = 0;
@@ -28,6 +28,31 @@ p90edb_database* p90edb_create()
     assert(db->buffer);
     
     return db;
+}
+
+void p90edb_buffer_prepare_bytes(p90edb_database* db, uint16_t length)
+{
+    if (db->current_ptr+length <= db->buffer_size) {
+        return; // no need extend buffer
+    }
+    uint32_t desired_size = db->current_ptr+(length*2);
+    db->buffer = realloc(db->buffer, desired_size);
+    assert(db->buffer);
+    
+    // update pointer
+    db->file_header = (void*)db->buffer;
+    if (db->current_chunk) {
+        // TODO: convert to method
+        db->current_chunk = (void*)&db->buffer[db->chunk_head_ptr];
+    }
+    db->buffer_size = desired_size;
+}
+
+void p90edb_buffer_padding_zero(p90edb_database* db, uint16_t length)
+{
+    p90edb_buffer_prepare_bytes(db, length);
+    memset(&db->buffer[db->current_ptr], 0, length);
+    db->current_ptr += length;
 }
 
 void p90edb_finalize(p90edb_database* db)
@@ -47,8 +72,7 @@ void p90edb_finalize(p90edb_database* db)
     // append dummy
     if (db->current_ptr < 1400) {
         uint16_t dummy_len = 1536;
-        memset(&db->buffer[db->current_ptr], 0, dummy_len);
-        db->current_ptr += dummy_len;
+        p90edb_buffer_padding_zero(db, dummy_len);
     }
     
     db->file_header->file_size = host_to_le32(db->current_ptr);
@@ -89,12 +113,14 @@ void p90edb_start_chunk(p90edb_database* db)
     assert(db->current_chunk == NULL);
     
     db->current_chunk = (void*)&db->buffer[db->current_ptr]; // fixed size chunk
+    db->chunk_head_ptr = db->current_ptr;
+    
+    p90edb_buffer_prepare_bytes(db, sizeof(p90edb_chunk_header));
+    db->current_ptr += sizeof(p90edb_chunk_header);
     db->current_record_count = 0;
     for (uint32_t i = 0; i < RECORD_COUNT_IN_CHUNK; i++) {
         db->current_chunk->record_offset[i] = 0;
     }
-    db->chunk_head_ptr = db->current_ptr;
-    db->current_ptr += sizeof(p90edb_chunk_header);
     db->file_header->chunk_count += 1;
 }
 
@@ -122,11 +148,6 @@ void p90edb_finalize_chunk(p90edb_database* db)
     db->current_chunk = NULL;
 }
 
-void p90edb_buffer_prepare_bytes(p90edb_database* db, uint16_t length)
-{
-    
-}
-
 void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t length)
 {
     p90edb_buffer_prepare_bytes(db, length);
@@ -139,8 +160,6 @@ void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const ui
     if (db->current_chunk == NULL) {
         p90edb_start_chunk(db);
     }
-    
-    p90edb_record_header* header = (void*)&db->buffer[db->current_ptr];
     
     uint8_t data_len_field[4] = {0,0,0,0};
     uint8_t data_len_field_size;
@@ -164,6 +183,9 @@ void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const ui
     if (is_truncate && record_length % 4 != 0) {
         record_length += 4 - (record_length % 4);
     }
+    p90edb_buffer_prepare_bytes(db, record_length);
+    
+    p90edb_record_header* header = (void*)&db->buffer[db->current_ptr];
     memset(header, 0, record_length); // fill zero for the current record
     
     header->type = host_to_le16(type);
@@ -263,8 +285,7 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
         assert(0);
     }
     
-    memcpy(&db->buffer[db->current_ptr], title_len_field, title_len_field_size);
-    db->current_ptr += title_len_field_size;
+    p90edb_buffer_append_bytes(db, title_len_field, title_len_field_size);
     file_path_record_len += title_len_field_size;
     
     
@@ -273,14 +294,12 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     file_path_record_len += title_length;
     
     if (title_length_extra_len) {
-        memset(&db->buffer[db->current_ptr], 0, title_length_extra_len);
-        db->current_ptr += title_length_extra_len;
+        p90edb_buffer_padding_zero(db, title_length_extra_len);
     }
     
     // round to multiply 4
     if (file_path_record_len % 4 != 0) {
         uint8_t extra_len = 4 - (file_path_record_len % 4);
-        memset(&db->buffer[db->current_ptr], 0, extra_len);
-        db->current_ptr += extra_len;
+        p90edb_buffer_padding_zero(db, extra_len);
     }
 }
