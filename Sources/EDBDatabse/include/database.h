@@ -12,7 +12,7 @@ typedef enum {
 
 typedef struct {
     uint32_t chunk_count;
-    uint32_t unknown1;
+    uint32_t record_count;
     uint32_t unknown_magic;
     uint32_t file_size;
     uint32_t unknown2;
@@ -20,9 +20,9 @@ typedef struct {
 
 typedef struct {
     uint32_t chunk_header_size_seq;
-    uint32_t unknown1;
+    uint32_t record_count_offset;
     uint32_t id;
-    uint32_t unknown2;
+    uint32_t unknown_record_count_in_chunk;
     uint32_t last_chunk_size;
     uint32_t unknown_mask1;
     uint32_t unknown3;
@@ -62,6 +62,8 @@ void p90edb_destroy(p90edb_database** db);
 
 void p90edb_append_artist(p90edb_database* db, uint32_t id, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding);
 void p90edb_append_genre(p90edb_database* db, uint32_t id, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding);
+void p90edb_append_album(p90edb_database* db, uint32_t artist_id, uint32_t genre_id, uint32_t album_id, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding);
+void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_id, uint32_t album_id, uint32_t song_id, const uint8_t* path, uint8_t path_length, const uint8_t* title, uint8_t title_length, p90edb_data_encoding encoding);
 
 #endif /* p90sd_database_h */
 
