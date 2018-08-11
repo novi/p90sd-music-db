@@ -286,7 +286,7 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
         title_len_field[padding_size+1] = 0x90;
         title_len_field[padding_size+2] = len;
         title_len_field_size = 1 + padding_size + 4;
-        title_len_field[0] = file_path_record_len + title_len_field_size;
+        title_len_field[0] = file_path_record_len + 1 + padding_size;
     } else {
         assert(0);
     }
