@@ -24,6 +24,7 @@ p90edb_database* p90edb_create()
     db->current_record_count = 0;
     db->chunk_head_ptr = 0;
     db->chunk_count = 0;
+    db->record_count_in_database = 0;
     assert(db->buffer);
     
     return db;
@@ -293,9 +294,7 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     p90edb_buffer_append_bytes(db, title_len_field, title_len_field_size);
     file_path_record_len += title_len_field_size;
     
-    
-    memcpy(&db->buffer[db->current_ptr], title, title_length);
-    db->current_ptr += title_length;
+    p90edb_buffer_append_bytes(db, title, title_length);
     file_path_record_len += title_length;
     
     if (title_length_extra_len) {
