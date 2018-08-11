@@ -155,7 +155,7 @@ void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t
     db->current_ptr += length;
 }
 
-void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t is_truncate)
+void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t should_truncate)
 {
     if (db->current_chunk == NULL) {
         p90edb_start_chunk(db);
@@ -180,7 +180,7 @@ void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const ui
     
     uint16_t record_length = ( 4 + (sizeof(uint32_t)*id_count) + data_len_field_size + data_length );
     // round to multiply 4
-    if (is_truncate && record_length % 4 != 0) {
+    if (should_truncate && record_length % 4 != 0) {
         record_length += 4 - (record_length % 4);
     }
     p90edb_buffer_prepare_bytes(db, record_length);
@@ -298,8 +298,8 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     }
     
     // round to multiply 4
-    if (file_path_record_len % 4 != 0) {
-        uint8_t extra_len = 4 - (file_path_record_len % 4);
+    if ( (file_path_record_len+title_length_extra_len) % 4 != 0) {
+        uint8_t extra_len = 4 - ((file_path_record_len+title_length_extra_len) % 4);
         p90edb_buffer_padding_zero(db, extra_len);
     }
 }

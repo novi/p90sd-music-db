@@ -144,7 +144,7 @@ final class Database {
         return true
     }
     
-    func generateDataBase() -> Data {
+    func generateDatabase() -> Data {
         for record in records {
             record.write(to: db)
         }
