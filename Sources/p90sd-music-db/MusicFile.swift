@@ -47,6 +47,12 @@ final class MusicFile: CustomStringConvertible {
             print(item.identifier?.rawValue, item.value?.description)
         }
         extractiCafMetadata(from: asset)
+        do {
+            let id3Reader = ID3Reader(file: filePath)
+            try id3Reader.parse()
+        } catch {
+            print("id3 reading error on \(filePath.path)")
+        }
         extractiTunesMetadata(from: asset)
     }
     
