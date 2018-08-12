@@ -108,7 +108,7 @@ final class DBManipulator {
         let db = Database()
         
         for f in files {
-            let title = (includeTrackNumber ? f.title : f.titleWithTrackNumber) ?? UnknownString
+            let title = (includeTrackNumber ? f.titleWithTrackNumber : f.title) ?? UnknownString
             let artist = (preferAlbumArtist ? f.albumArtist : nil) ?? f.artist ?? UnknownString
             _ = db.appendSong(title: title,
                           artist: artist,

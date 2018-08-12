@@ -70,10 +70,12 @@ void p90edb_finalize(p90edb_database* db)
     
     if (db->chunk_head_ptr) {
         p90edb_chunk_header* last_chunk = p90edb_get_current_chunk(db);
+        uint32_t last_chunk_head_ptr = db->chunk_head_ptr;
+        
         p90edb_finalize_chunk(db);
         
         // update last chunk size
-        last_chunk->last_chunk_size = db->current_ptr - db->chunk_head_ptr;
+        last_chunk->last_chunk_size = db->current_ptr - last_chunk_head_ptr;
     }
     
     assert(db->is_finalized == 0);
@@ -147,14 +149,14 @@ void p90edb_finalize_chunk(p90edb_database* db)
     
     uint32_t prev_chunk_count = db->chunk_count - 1;
     
-    //uint8_t chunk_header_valid_size = ( 4 * 9 /* chunk header without record offset*/ ) + db->current_record_count*2;
-    uint8_t chunk_header_valid_size = 0xa4;
+    uint8_t chunk_header_valid_size = ( 4 * 9 /* chunk header without record offset*/ ) + db->current_record_count*2 + 8;
+    //uint8_t chunk_header_valid_size = 0xa4;
     uint8_t chunk_seq = ((prev_chunk_count * 2) + 4 ) % 0xff;
     chunk_header->chunk_header_size_seq = host_to_le32( (chunk_header_valid_size << 0) | (chunk_seq << 8) );
     chunk_header->record_count_offset = host_to_le32( (db->current_record_count + db->prev_record_count_in_chunk ) );
     chunk_header->id = host_to_le32(prev_chunk_count * 4);
     chunk_header->unknown_record_count_in_chunk = host_to_le32( (db->current_record_count << 16) );
-    chunk_header->last_chunk_size = 0;
+    chunk_header->last_chunk_size = host_to_le32( 0 );
     chunk_header->unknown_mask1 = host_to_le32(0xffffffff);
     chunk_header->unknown3 = host_to_le32(0);
     chunk_header->unknown_mask2 = host_to_le32(0x88888888);

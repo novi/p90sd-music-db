@@ -3,7 +3,7 @@
 
 #include "inttypes.h"
 
-#define RECORD_COUNT_IN_CHUNK (16)
+#define RECORD_COUNT_IN_CHUNK (15)
 
 typedef enum {
     p90edb_data_encoding_ascii = 0,
@@ -18,7 +18,7 @@ typedef struct {
     uint32_t unknown_magic;
     uint32_t file_size;
     uint32_t unknown2;
-} p90edb_file_header;
+} __attribute__((packed)) p90edb_file_header;
 
 typedef struct {
     uint32_t chunk_header_size_seq;
@@ -31,14 +31,14 @@ typedef struct {
     uint32_t unknown_mask2;
     uint32_t unknown4;
     uint16_t record_offset[RECORD_COUNT_IN_CHUNK]; // max RECORD_COUNT_IN_CHUNK records
-} p90edb_chunk_header;
+} __attribute__((packed)) p90edb_chunk_header;
 
 typedef struct {
     uint16_t type;
     uint16_t seq;
     uint32_t id[1]; // 1...5
     // uint8_t data_len_field[1...4] after ids
-} p90edb_record_header;
+} __attribute__((packed)) p90edb_record_header;
 
 typedef struct {
     uint8_t* buffer;
@@ -53,7 +53,7 @@ typedef struct {
     uint32_t prev_chunk_ptr;
     uint32_t prev_record_count_in_chunk;
     
-    uint32_t chunk_head_ptr;    
+    uint32_t chunk_head_ptr;
     uint16_t current_record_count; // in current chunk
     
     uint32_t record_seq;
