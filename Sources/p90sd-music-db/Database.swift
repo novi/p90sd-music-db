@@ -73,7 +73,7 @@ final class Database {
     
     private let db: UnsafeMutablePointer<p90edb_database>
     init() {
-        db = p90edb_create()!;
+        db = p90edb_create()!
     }
     
     private var records: [EDBWritable] = []
@@ -93,6 +93,10 @@ final class Database {
         self.artist[name] = artist
         self.records.append(artist)
         return artist
+    }
+    
+    deinit {
+        //p90edb_destroy(&db)
     }
     
     private var genre: [String: Genre] = [:]
