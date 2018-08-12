@@ -6,7 +6,7 @@
 //
 
 import Foundation
-
+import ID3TagEditor
 
 final class ID3Reader {
     let file: URL
@@ -14,7 +14,7 @@ final class ID3Reader {
         self.file = file
     }
     
-    private var id3Data: Data? = nil
+    internal private(set) var id3Tag: ID3Tag? = nil
     
     private func parseAsWav() throws {
         let handle = try FileHandle(forReadingFrom: file)
@@ -56,7 +56,7 @@ final class ID3Reader {
                 print("id3 read error: \(file.path)")
                 return
             }
-            self.id3Data = id3Data
+            self.id3Tag = ID3TagEditor().read(mp3: id3Data)
         }
     }
     

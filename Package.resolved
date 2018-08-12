@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "ID3TagEditor",
+        "repositoryURL": "https://github.com/novi/ID3TagEditor.git",
+        "state": {
+          "branch": null,
+          "revision": "b88326a758c837cb8944545a288066222f769014",
+          "version": "2.0.2"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
