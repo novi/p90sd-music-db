@@ -3,7 +3,7 @@
 
 #include "inttypes.h"
 
-#define RECORD_COUNT_IN_CHUNK (64)
+#define RECORD_COUNT_IN_CHUNK (16)
 
 typedef enum {
     p90edb_data_encoding_ascii = 0,
@@ -50,7 +50,10 @@ typedef struct {
     
     uint32_t current_ptr;
     
-    uint32_t chunk_head_ptr;
+    uint32_t prev_chunk_ptr;
+    uint32_t prev_record_count_in_chunk;
+    
+    uint32_t chunk_head_ptr;    
     uint16_t current_record_count; // in current chunk
     
     uint32_t record_seq;

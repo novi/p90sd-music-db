@@ -25,6 +25,8 @@ p90edb_database* p90edb_create()
     db->chunk_head_ptr = 0;
     db->chunk_count = 0;
     db->record_count_in_database = 0;
+    db->prev_chunk_ptr = 0;
+    db->prev_record_count_in_chunk = 0;
     assert(db->buffer);
     
     return db;
@@ -51,6 +53,15 @@ void p90edb_buffer_padding_zero(p90edb_database* db, uint16_t length)
 p90edb_chunk_header* p90edb_get_current_chunk(p90edb_database* db)
 {
     return (void*)&db->buffer[db->chunk_head_ptr];
+}
+
+p90edb_chunk_header* p90edb_get_prev_chunk(p90edb_database* db)
+{
+    if (db->prev_chunk_ptr) {
+        return (void*)&db->buffer[db->prev_chunk_ptr];
+    } else {
+        return NULL;
+    }    
 }
 
 void p90edb_finalize(p90edb_database* db)
@@ -110,6 +121,10 @@ void p90edb_start_chunk(p90edb_database* db)
 {
     assert(db->chunk_head_ptr == 0);
     
+    // store prev chunk head
+    db->prev_chunk_ptr = db->chunk_head_ptr;
+    db->prev_record_count_in_chunk = db->current_record_count;
+    
     // fixed size chunk
     db->chunk_head_ptr = db->current_ptr;
     
@@ -136,8 +151,7 @@ void p90edb_finalize_chunk(p90edb_database* db)
     uint8_t chunk_header_valid_size = 0xa4;
     uint8_t chunk_seq = ((prev_chunk_count * 2) + 4 ) % 0xff;
     chunk_header->chunk_header_size_seq = host_to_le32( (chunk_header_valid_size << 0) | (chunk_seq << 8) );
-    // TODO:
-    chunk_header->record_count_offset = host_to_le32( (db->current_record_count) );
+    chunk_header->record_count_offset = host_to_le32( (db->current_record_count + db->prev_record_count_in_chunk ) );
     chunk_header->id = host_to_le32(prev_chunk_count * 4);
     chunk_header->unknown_record_count_in_chunk = host_to_le32( (db->current_record_count << 16) );
     chunk_header->last_chunk_size = 0;
