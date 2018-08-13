@@ -3,7 +3,7 @@
 
 #include "inttypes.h"
 
-#define RECORD_COUNT_IN_CHUNK (15)
+#define RECORD_COUNT_IN_CHUNK (64)
 
 typedef enum {
     p90edb_data_encoding_ascii = 0,
