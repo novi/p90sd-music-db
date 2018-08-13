@@ -174,7 +174,7 @@ void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t
 
 void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t should_truncate)
 {
-    if (db->current_record_count >= RECORD_COUNT_IN_CHUNK) {
+    if (db->current_record_count >= 15) {
         p90edb_finalize_chunk(db); // finalize current chunk, new chunk will start
     }
     
