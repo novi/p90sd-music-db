@@ -8,6 +8,10 @@
 import Foundation
 import ID3TagEditor
 
+enum ID3ReaderError: Error {
+    case id3DataReadingError
+}
+
 final class ID3Reader {
     let file: URL
     init(file: URL) {
@@ -18,6 +22,9 @@ final class ID3Reader {
     
     private func parseAsWav() throws {
         let handle = try FileHandle(forReadingFrom: file)
+        defer {
+            handle.closeFile()
+        }
         var chunk = handle.readData(ofLength: 4)
         guard chunk == "RIFF".data(using: .ascii) else {
             return
@@ -52,9 +59,7 @@ final class ID3Reader {
         if length > 0 {
             let id3Data = handle.readData(ofLength: Int(length))
             if id3Data.count != length {
-                // TODO: throw an error
-                print("id3 read error: \(file.path)")
-                return
+                throw ID3ReaderError.id3DataReadingError
             }
             self.id3Tag = ID3TagEditor().read(mp3: id3Data)
         }

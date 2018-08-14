@@ -45,35 +45,31 @@ final class MusicFile: CustomStringConvertible {
         //for item in asset.metadata {
         //    print(item.identifier?.rawValue, item.value?.description)
         //}
-        extractiCafMetadata(from: asset)
-        extractiID3Metadata()
+        extractCafMetadata(from: asset)
+        try extractID3Metadata()
         extractiTunesMetadata(from: asset)
     }
     
-    func extractiID3Metadata() {
-        do {
-            let id3Reader = ID3Reader(file: filePath)
-            try id3Reader.parse()
-            //print(id3Reader.id3Tag?.tags)
-            if let id3 = id3Reader.id3Tag {
-                self.artist = id3.artist
-                self.albumArtist = id3.albumArtist
-                self.title = id3.title
-                self.album = id3.album
-                self.genre = id3.genre?.description
-                self.trackNumber = id3.trackPosition?.position
-                if let discNumString = id3.tags["TPOS"] {
-                    let parts = discNumString.split(separator: "/").map(String.init)
-                    if parts.count == 1 {
-                        self.discNumber = Int(parts[0])
-                    } else if parts.count == 2 {
-                        self.discNumber = Int(parts[0])
-                        self.discTotal = Int(parts[1])
-                    }
+    func extractID3Metadata() throws {
+        let id3Reader = ID3Reader(file: filePath)
+        try id3Reader.parse()
+        //print(id3Reader.id3Tag?.tags)
+        if let id3 = id3Reader.id3Tag {
+            self.artist = id3.artist
+            self.albumArtist = id3.albumArtist
+            self.title = id3.title
+            self.album = id3.album
+            self.genre = id3.genre?.description
+            self.trackNumber = id3.trackPosition?.position
+            if let discNumString = id3.tags["TPOS"] {
+                let parts = discNumString.split(separator: "/").map(String.init)
+                if parts.count == 1 {
+                    self.discNumber = Int(parts[0])
+                } else if parts.count == 2 {
+                    self.discNumber = Int(parts[0])
+                    self.discTotal = Int(parts[1])
                 }
             }
-        } catch {
-            print("id3 reading error on \(filePath.path)")
         }
     }
     
@@ -125,7 +121,7 @@ final class MusicFile: CustomStringConvertible {
         }
     }
     
-    func extractiCafMetadata(from asset: AVAsset) {
+    func extractCafMetadata(from asset: AVAsset) {
         let items = asset.metadata
         for item in items {
             guard let key = item.identifier else {
@@ -148,11 +144,11 @@ final class MusicFile: CustomStringConvertible {
     }
     
     var description: String {
-        return "title:\(title as Any),artist:\(artist as Any),album:\(album as Any),album-artist:\(albumArtist as Any),genre:\(genre as Any),track:\(trackNumber as Any)[\(discNumber as Any) of \(discTotal as Any)],\(filePath.path)"
+        return "title:\(title ?? "?"),artist:\(artist ?? "?"),album:\(album ?? "?"),album-artist:\(albumArtist ?? "?"),genre:\(genre ?? "?"),track:\(trackNumber ?? -1)[\(discNumber ?? -1) of \(discTotal ?? -1)],\(filePath.path)"
     }
     
     static func hasMusicFileExtension(url: URL) -> Bool {
-        let extensions = ["wav", "m4a", "flac", "mp3", "dsf"]
-        return extensions.contains(url.pathExtension.lowercased())
+        let validExtensions = ["wav", "m4a", "flac", "mp3", "dsf"]
+        return validExtensions.contains(url.pathExtension.lowercased())
     }
 }

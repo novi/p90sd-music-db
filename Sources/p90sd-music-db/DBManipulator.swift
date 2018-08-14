@@ -80,7 +80,8 @@ final class DBManipulator {
             for p in filePathComponents {
                 dbPathComponents.append(p)
             }
-            return dbPathComponents.joined(separator: "\\")
+            // convert unicode normarization to NFC
+            return dbPathComponents.joined(separator: "\\").precomposedStringWithCanonicalMapping
         } else {
             fatalError("unsupported platform or macOS version")
         }
@@ -108,7 +109,7 @@ final class DBManipulator {
         let db = Database()
         
         for f in files {
-            let title = (includeTrackNumber ? f.titleWithTrackNumber : f.title) ?? UnknownString
+            let title = (includeTrackNumber ? f.titleWithTrackNumber : f.title) ?? (f.filePath.lastPathComponent)
             let artist = (preferAlbumArtist ? f.albumArtist : nil) ?? f.artist ?? UnknownString
             _ = db.appendSong(title: title,
                           artist: artist,
@@ -120,6 +121,9 @@ final class DBManipulator {
         do {
             let data = db.generateDatabase()
             try data.write(to: volumePath.appendingPathComponent("sdDatabase.edb"))
+            
+            try data.write(to: URL(fileURLWithPath: "/tmp/sdDatabase.edb.debug"))
+            
             print("database generated.")
             
             
