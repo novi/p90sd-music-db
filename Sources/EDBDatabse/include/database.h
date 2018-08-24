@@ -21,7 +21,7 @@ typedef struct {
 } __attribute__((packed)) p90edb_file_header;
 
 typedef struct {
-    uint32_t chunk_header_size_seq;
+    uint32_t chunk_size;
     uint32_t record_count_offset;
     uint32_t id;
     uint32_t unknown_record_count_in_chunk;

@@ -88,7 +88,7 @@ final class DBManipulator {
     }
     
     static func isValidVolume(volumePath: URL) -> Bool {
-        return FileManager.default.fileExists(atPath: volumePath.appendingPathComponent("HA-Player.sys").path)
+        return FileManager.default.fileExists(atPath: volumePath.appendingPathComponent("sdDatabase.edb").path)
     }
     
     func createDatabase(preferAlbumArtist: Bool, includeTrackNumber: Bool) {

@@ -68,6 +68,10 @@ void p90edb_finalize(p90edb_database* db)
 {
     assert(db->chunk_head_ptr);
     
+    // append padding
+    uint16_t padding_len = 1024 + 512 + 512;
+    p90edb_buffer_padding_zero(db, padding_len);
+    
     if (db->chunk_head_ptr) {
         p90edb_chunk_header* last_chunk = p90edb_get_current_chunk(db);
         uint32_t last_chunk_head_ptr = db->chunk_head_ptr;
@@ -80,11 +84,7 @@ void p90edb_finalize(p90edb_database* db)
     
     assert(db->is_finalized == 0);
     
-    // append dummy
-    if (db->current_ptr < 1400) {
-        uint16_t dummy_len = 1536;
-        p90edb_buffer_padding_zero(db, dummy_len);
-    }
+    
     
     p90edb_file_header* header = (void*)db->buffer;
     
@@ -138,6 +138,8 @@ void p90edb_start_chunk(p90edb_database* db)
         chunk_header->record_offset[i] = 0;
     }
     db->chunk_count += 1;
+    
+    db->record_seq = 0; // reset on every chunk
 }
 
 void p90edb_finalize_chunk(p90edb_database* db)
@@ -145,21 +147,29 @@ void p90edb_finalize_chunk(p90edb_database* db)
     assert(db->chunk_head_ptr);
     assert(db->current_record_count > 0);
     
+    // round chunk size to multiply 4
+    if ( db->current_ptr % 4 != 0) {
+        uint8_t extra_len = 4 - (db->current_ptr % 4);
+        p90edb_buffer_padding_zero(db, extra_len);
+    }
+    
     p90edb_chunk_header* chunk_header = p90edb_get_current_chunk(db);
     
     uint32_t prev_chunk_count = db->chunk_count - 1;
     
-    uint8_t chunk_header_valid_size = ( 4 * 9 /* chunk header without record offset*/ ) + db->current_record_count*2 + 8;
-    //uint8_t chunk_header_valid_size = 0xa4;
     uint8_t chunk_seq = ((prev_chunk_count * 2) + 4 ) % 0xff;
-    chunk_header->chunk_header_size_seq = host_to_le32( (chunk_header_valid_size << 0) | (chunk_seq << 8) );
+    chunk_header->chunk_size = host_to_le32(db->current_ptr - db->chunk_head_ptr);
     chunk_header->record_count_offset = host_to_le32( (db->current_record_count + db->prev_record_count_in_chunk ) );
-    chunk_header->id = host_to_le32(prev_chunk_count * 4);
+    chunk_header->id = host_to_le32(prev_chunk_count * 0x40);
     chunk_header->unknown_record_count_in_chunk = host_to_le32( (db->current_record_count << 16) );
     chunk_header->last_chunk_size = host_to_le32( 0 );
-    chunk_header->unknown_mask1 = host_to_le32(0xffffffff);
+    uint32_t mask = 0;
+    for (uint16_t i = 0; i < db->current_record_count; i++) {
+        mask |= 1 << i;
+    }
+    chunk_header->unknown_mask1 = host_to_le32(mask);
     chunk_header->unknown3 = host_to_le32(0);
-    chunk_header->unknown_mask2 = host_to_le32(0x88888888);
+    chunk_header->unknown_mask2 = host_to_le32( db->current_record_count ? (1 << (db->current_record_count-1) ) : 0 );
     chunk_header->unknown4 = host_to_le32(0);
     
     db->chunk_head_ptr = 0;
@@ -172,7 +182,7 @@ void p90edb_buffer_append_bytes(p90edb_database* db, const void* bytes, uint16_t
     db->current_ptr += length;
 }
 
-void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t should_truncate)
+uint32_t p90edb_append_record(p90edb_database* db, p90edb_record_type type, const uint32_t* ids, uint8_t id_count, const uint8_t* data, uint8_t data_length, p90edb_data_encoding encoding, uint8_t should_truncate)
 {
     if (db->current_record_count >= 15) {
         p90edb_finalize_chunk(db); // finalize current chunk, new chunk will start
@@ -231,6 +241,7 @@ void p90edb_append_record(p90edb_database* db, p90edb_record_type type, const ui
     db->record_count_in_database += 1;
     
     db->current_ptr += record_length;
+    return record_length;
 }
 
 
@@ -267,15 +278,13 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     ids[3] = song_id;
     ids[4] = 0;
     
-    uint32_t record_head_ptr = db->current_ptr;
-    
     // append path
-    p90edb_append_record(db, p90edb_record_type_song, ids, 5, path, path_length, encoding, 0);
+    uint32_t file_path_record_len = p90edb_append_record(db, p90edb_record_type_song, ids, 5, path, path_length, encoding, 0);
+    assert(file_path_record_len < 255);
     
     // append title
     
-    uint8_t title_len_field[10] = {0,0,0,0,0,0,0,0,0,0};
-    uint32_t file_path_record_len = db->current_ptr - record_head_ptr;
+    uint8_t title_len_field[10] = {0,0,0,0,0,0,0,0,0,0};    
 
     uint8_t title_len_field_size = 0;
     uint16_t title_length_extra_len = 0;
