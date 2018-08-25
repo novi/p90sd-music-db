@@ -26,7 +26,7 @@ NOTE: Make sure that your SD card is mounted and database file `sdDatabase.edb` 
 * `caaf/info-*` (may be used in Windows?)
 
 
-### Linux and Windows
+## Linux and Windows
 
 Run the utility on Docker.
 
