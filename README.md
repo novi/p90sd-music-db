@@ -8,11 +8,9 @@ This utiltiy allows you to generate music database file for TEAC HA-P90SD Music 
 ## Usage
 
 1. Install Xcode 9.4.1 or later.
-2. 
+2. Open `run.command`.
 
 ```sh
-$ swift run -c release
-
 P90SD media found on /Volumes/Untitled
 ...
 database generated.
