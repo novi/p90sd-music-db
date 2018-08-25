@@ -131,6 +131,7 @@ final class Database {
     
     func appendSong(title: String, artist: String, genre: String, album: String, path: String) -> Bool {
         
+        //print(path.utf16.count)
         guard String.canAddToDatabase(path: path) else {
             print("could not add to the database. path:\(path)")
             return false

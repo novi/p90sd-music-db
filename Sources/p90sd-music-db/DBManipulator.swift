@@ -52,7 +52,6 @@ final class DBManipulator {
             queue.async(group: group) {
                 do {
                     try f.fetchMetadata()
-                    print(f)
                 } catch {
                     DispatchQueue.main.async {
                         print("could not fetch metadata on the file", f.filePath.path)
@@ -109,6 +108,7 @@ final class DBManipulator {
         let db = Database()
         
         for f in files {
+            print(f)
             let title = (includeTrackNumber ? f.titleWithTrackNumber : f.title) ?? (f.filePath.lastPathComponent)
             let artist = (preferAlbumArtist ? f.albumArtist : nil) ?? f.artist ?? UnknownString
             _ = db.appendSong(title: title,
@@ -121,9 +121,9 @@ final class DBManipulator {
         do {
             let data = db.generateDatabase()
             try data.write(to: volumePath.appendingPathComponent("sdDatabase.edb"))
-            
+            #if DEBUG
             try data.write(to: URL(fileURLWithPath: "/tmp/sdDatabase.edb.debug"))
-            
+            #endif
             print("database generated.")
             
             
