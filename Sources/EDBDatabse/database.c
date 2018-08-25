@@ -294,7 +294,7 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     
     // append path
     uint32_t file_path_record_len = p90edb_append_record(db, p90edb_record_type_song, ids, 5, path, path_length, encoding, 0);
-    assert(file_path_record_len < 255);
+    assert(file_path_record_len <= 255);
     
     // append title
     

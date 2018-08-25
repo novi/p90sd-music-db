@@ -8,18 +8,18 @@
 import Foundation
 import EDBDatabse
 
-fileprivate let MAX_STRING_BYTES_LENGTH = 255 - 4
+fileprivate let MAX_STRING_BYTES_LENGTH = (255 - 3) / 2
 
-fileprivate let MAX_STRING_BYTES_LENGTH_UTF16 = MAX_STRING_BYTES_LENGTH / 2
+fileprivate let MAX_STRING_LENGTH_UTF16 = (255 - 4) / 2
 
 extension String {
     
     static func canAddToDatabase(path: String) -> Bool {
-        return path.utf16.count < MAX_STRING_BYTES_LENGTH_UTF16
+        return path.utf16.count < MAX_STRING_LENGTH_UTF16
     }
     
     static func songToEDBBytes(path: String, title: String, _ block: (_ pathData: UnsafePointer<UInt8>, _ pathLength: UInt8, _ titleData: UnsafePointer<UInt8>, _ titleLength: UInt8, _ encoding: p90edb_data_encoding)-> Void) {
-        let truncatedTitle = String(title.utf16.prefix(MAX_STRING_BYTES_LENGTH_UTF16)) ?? "TODO: truncate error"
+        let truncatedTitle = String(title.utf16.prefix(MAX_STRING_LENGTH_UTF16)) ?? "TODO: truncate error"
         if let pathData = path.data(using: .ascii),
             let titleData = truncatedTitle.data(using: .ascii) {
             pathData.withUnsafeBytes { ptrPath in
@@ -41,7 +41,7 @@ extension String {
     
     func withEDBBytes( _ block: (_ data: UnsafePointer<UInt8>, _ length: UInt8, _ encoding: p90edb_data_encoding)-> Void ) {
         
-        let truncatedTitle = String(self.utf16.prefix(MAX_STRING_BYTES_LENGTH_UTF16)) ?? "TODO: truncate error"
+        let truncatedTitle = String(self.utf16.prefix(MAX_STRING_LENGTH_UTF16)) ?? "TODO: truncate error"
         
         if let data = truncatedTitle.data(using: .ascii) {
             data.withUnsafeBytes { ptr in
