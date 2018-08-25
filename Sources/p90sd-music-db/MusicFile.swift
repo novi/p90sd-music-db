@@ -6,7 +6,10 @@
 //
 
 import Foundation
+
+#if os(macOS)
 import AVFoundation
+#endif
 
 final class MusicFile: CustomStringConvertible {
     let filePath: URL
@@ -39,6 +42,7 @@ final class MusicFile: CustomStringConvertible {
     }
     
     func fetchMetadata() throws {
+        #if os(macOS)
         let asset = AVAsset(url: filePath)
         //let formats = asset.availableMetadataFormats
         //print(formats)
@@ -46,8 +50,13 @@ final class MusicFile: CustomStringConvertible {
         //    print(item.identifier?.rawValue, item.value?.description)
         //}
         extractCafMetadata(from: asset)
+        #endif
+        
         try extractID3Metadata()
+        
+        #if os(macOS)
         extractiTunesMetadata(from: asset)
+        #endif
     }
     
     func extractID3Metadata() throws {
@@ -73,6 +82,7 @@ final class MusicFile: CustomStringConvertible {
         }
     }
     
+    #if os(macOS)
     func extractiTunesMetadata(from asset: AVAsset) {
         let items = AVMetadataItem.metadataItems(from: asset.metadata, withKey: nil, keySpace: .iTunes)
         for item in items {
@@ -142,6 +152,7 @@ final class MusicFile: CustomStringConvertible {
             }
         }
     }
+    #endif
     
     var description: String {
         return "title:\(title ?? "?"),artist:\(artist ?? "?"),album:\(album ?? "?"),album-artist:\(albumArtist ?? "?"),genre:\(genre ?? "?"),track:\(trackNumber ?? -1)[\(discNumber ?? -1) of \(discTotal ?? -1)],\(filePath.path)"
