@@ -25,8 +25,19 @@ NOTE: Make sure that your SD card is mounted and database file `sdDatabase.edb` 
 * WAV with ID3 tag in id3 chunk (Supported by [XLD](http://tmkk.undo.jp/xld/index_e.html))
 * `caaf/info-*` (may be used in Windows?)
 
+
+## Linux and Windows
+
+Run the utility on Docker.
+
+```sh
+$ SDCARD="/path/to/your sd card" make run
+```
+
+Some metadata formats is not supported in Docker running.
+
 ### TODO
 
 * DSF ID3 tag
 * Command line options (`preferAlbumArtist`, `includeTrackNumber`). See `main.swift`.
-* Docker support
+

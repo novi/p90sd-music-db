@@ -1,6 +1,9 @@
 //#include <byteswap.h>
 //#include <architecture/byte_order.h>
+#ifndef __linux__
 #include <machine/endian.h>
+#endif
+
 #include <inttypes.h>
 
 #if __DARWIN_BYTE_ORDER == __DARWIN_LITTLE_ENDIAN
