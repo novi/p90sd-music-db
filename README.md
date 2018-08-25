@@ -2,7 +2,7 @@
 
 # p90sd-music-db
 
-This utiltiy allows you to generate music database file for TEAC HA-P90SD Music Player.
+This utility allows you to generate music database file for TEAC HA-P90SD Music Player.
 
 
 ## Usage
