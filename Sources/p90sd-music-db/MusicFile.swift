@@ -29,13 +29,16 @@ final class MusicFile: CustomStringConvertible {
         }
         var titleArray: [String] = []
         if let discTotal = self.discTotal, let discNumber = self.discNumber, discTotal >= 2 {
-            titleArray.append(String(format: "%02d", discNumber))
+            titleArray.append(String(format: "%01d", discNumber))
+            if trackNumber != nil {
+                titleArray.append("-")
+            }
         }
         if let trackNumber = self.trackNumber {
             titleArray.append(String(format: "%02d", trackNumber))
         }
-        titleArray.append(title)
-        return titleArray.joined(separator: " ")
+        titleArray.append(" " + title)
+        return titleArray.joined()
     }
     
     func fetchMetadata() throws {
