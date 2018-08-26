@@ -10,7 +10,7 @@ import EDBDatabse
 
 fileprivate let MAX_STRING_BYTES_LENGTH = (255 - 3) / 2
 
-fileprivate let MAX_STRING_LENGTH_UTF16 = (255 - 4) / 2
+fileprivate let MAX_STRING_LENGTH_UTF16 = (255 - 28) / 2
 
 extension String {
     

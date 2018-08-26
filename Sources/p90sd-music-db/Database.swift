@@ -131,7 +131,7 @@ final class Database {
     
     func appendSong(title: String, artist: String, genre: String, album: String, path: String) -> Bool {
         
-        #if DEBUG
+        #if DEBUG || Xcode
         print(path, path.utf16.count)
         #endif
         guard String.canAddToDatabase(path: path) else {
