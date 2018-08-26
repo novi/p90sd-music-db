@@ -32,12 +32,7 @@ final class DBManipulator {
         } else {
             // the path is file
             if MusicFile.hasMusicFileExtension(url: path) {
-                let pathInDatabase = databasePathFor(filePath: path)
-                if String.canAddToDatabase(path: pathInDatabase) {
-                    files.append(MusicFile(filePath: path))
-                } else {
-                    print("file path too long", path.path)
-                }
+                files.append(MusicFile(filePath: path))
             }
         }
     }
@@ -102,10 +97,14 @@ final class DBManipulator {
             print("no music files on this volume", volumePath)
             return
         }
+        
+        print(files.count, "files found. reading metadata...")
+        
         fetchMetadata()
         
         let UnknownString = "unknown"
         let db = Database()
+
         
         for f in files {
             print(f)
@@ -121,7 +120,7 @@ final class DBManipulator {
         do {
             let data = db.generateDatabase()
             try data.write(to: volumePath.appendingPathComponent("sdDatabase.edb"))
-            #if DEBUG
+            #if DEBUG || Xcode
             try data.write(to: URL(fileURLWithPath: "/tmp/sdDatabase.edb.debug"))
             #endif
             print("database generated.")

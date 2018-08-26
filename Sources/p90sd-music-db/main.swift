@@ -1,14 +1,24 @@
 import Foundation
 import EDBDatabse
+import CoreFoundation
 
-for item in try FileManager.default.contentsOfDirectory(atPath: "/Volumes") {
-    let volumePath = URL(fileURLWithPath: "/Volumes").appendingPathComponent(item)
-    if DBManipulator.isValidVolume(volumePath: volumePath) {
-        print("P90SD media found on \(volumePath.path)")
-        let manipulator = DBManipulator(volumePath: volumePath)
-        manipulator.createDatabase(preferAlbumArtist: true, includeTrackNumber: true)
+DispatchQueue.main.async {
+    for item in try! FileManager.default.contentsOfDirectory(atPath: "/Volumes") {
+        let volumePath = URL(fileURLWithPath: "/Volumes").appendingPathComponent(item)
+        if DBManipulator.isValidVolume(volumePath: volumePath) {
+            print("P90SD media found on \(volumePath.path)")
+            let manipulator = DBManipulator(volumePath: volumePath)
+            manipulator.createDatabase(preferAlbumArtist: true, includeTrackNumber: true)
+        }
+    }
+    DispatchQueue.main.async {
+        CFRunLoopStop(CFRunLoopGetMain())
     }
 }
+
+CFRunLoopRun()
+
+
 
 
 /*

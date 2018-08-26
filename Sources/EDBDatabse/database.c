@@ -218,8 +218,8 @@ uint32_t p90edb_append_record(p90edb_database* db, p90edb_record_type type, cons
         data_len_field_size = 4;
         data_len_field[0] = 0x90;
         uint16_t len = data_length + 4;
-        assert(len <= 255);
         data_len_field[1] = len;
+        data_len_field[2] = len >> 8;
     } else {
         assert(0);
     }
@@ -295,7 +295,6 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
     
     // append path
     uint32_t file_path_record_len = p90edb_append_record(db, p90edb_record_type_song, ids, 5, path, path_length, encoding, 0);
-    assert(file_path_record_len <= 255-6);
     
     // append title
     
@@ -307,6 +306,7 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
         uint16_t len = title_length * 2 + 3;
         assert(len <= 255);
         title_len_field[0] = file_path_record_len + 1;
+        assert(file_path_record_len + 1 <= 255);
         title_len_field[1] = len;
         title_len_field_size = 2;
         title_length_extra_len = 0;
@@ -326,7 +326,9 @@ void p90edb_append_song(p90edb_database* db, uint32_t artist_id, uint32_t genre_
         title_len_field[padding_size+1] = 0x90;
         title_len_field[padding_size+2] = len;
         title_len_field_size = 1 + padding_size + 4;
-        title_len_field[0] = file_path_record_len + 1 + padding_size;
+        uint16_t filepath_len = file_path_record_len + 1 + padding_size;
+        title_len_field[0] = filepath_len; // TODO: endianess
+        title_len_field[1] = filepath_len >> 8;
     } else {
         assert(0);
     }
