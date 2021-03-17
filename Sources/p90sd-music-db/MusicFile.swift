@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import ID3TagEditor
 
 #if os(macOS)
 import AVFoundation
@@ -67,20 +68,16 @@ final class MusicFile: CustomStringConvertible {
         try id3Reader.parse()
         //print(id3Reader.id3Tag?.tags)
         if let id3 = id3Reader.id3Tag {
-            self.artist = id3.artist
-            self.albumArtist = id3.albumArtist
-            self.title = id3.title
-            self.album = id3.album
-            self.genre = id3.genre?.description
-            self.trackNumber = id3.trackPosition?.position
-            if let discNumString = id3.tags["TPOS"] {
-                let parts = discNumString.split(separator: "/").map(String.init)
-                if parts.count == 1 {
-                    self.discNumber = Int(parts[0])
-                } else if parts.count == 2 {
-                    self.discNumber = Int(parts[0])
-                    self.discTotal = Int(parts[1])
-                }
+            
+            self.artist = (id3.frames[.artist] as? ID3FrameWithStringContent)?.content
+            self.albumArtist = (id3.frames[.albumArtist] as? ID3FrameWithStringContent)?.content
+            self.title = (id3.frames[.title] as? ID3FrameWithStringContent)?.content
+            self.album = (id3.frames[.album] as? ID3FrameWithStringContent)?.content
+            self.genre = (id3.frames[.genre] as? ID3FrameWithStringContent)?.content
+            self.trackNumber = (id3.frames[.trackPosition] as? ID3FramePartOfTotal)?.part
+            if let discNumPart = (id3.frames[.discPosition] as? ID3FramePartOfTotal) {
+                self.discNumber = discNumPart.part
+                self.discTotal = discNumPart.total
             }
         }
     }
@@ -119,15 +116,15 @@ final class MusicFile: CustomStringConvertible {
             } else if key == AVMetadataIdentifier.iTunesMetadataTrackNumber {
                 if let trackNumber = item.dataValue, trackNumber.count == 8 {
                     let bytes = Array(trackNumber)
-                    let tracks = Data(bytes: bytes[2...3])
+                    let tracks = Data(bytes[2...3])
                     self.trackNumber = Int(Int16(bigEndian: tracks.withUnsafeBytes { $0.pointee }))
                 }
             } else if key == AVMetadataIdentifier.iTunesMetadataDiscNumber {
                 if let discNumber = item.dataValue, discNumber.count == 6 {
                     let bytes = Array(discNumber)
-                    let discNum = Data(bytes: bytes[2...3])
+                    let discNum = Data(bytes[2...3])
                     self.discNumber = Int(Int16(bigEndian: discNum.withUnsafeBytes { $0.pointee }))
-                    let discTotal = Data(bytes: bytes[4...5])
+                    let discTotal = Data(bytes[4...5])
                     self.discTotal = Int(Int16(bigEndian: discTotal.withUnsafeBytes { $0.pointee }))
                 }
             }

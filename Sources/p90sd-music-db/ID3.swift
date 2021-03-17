@@ -61,7 +61,7 @@ final class ID3Reader {
             if id3Data.count != length {
                 throw ID3ReaderError.id3DataReadingError
             }
-            self.id3Tag = ID3TagEditor().read(mp3: id3Data)
+            self.id3Tag = try ID3TagEditor().read(mp3: id3Data)
         }
     }
     

@@ -3,11 +3,11 @@
     "pins": [
       {
         "package": "ID3TagEditor",
-        "repositoryURL": "https://github.com/novi/ID3TagEditor.git",
+        "repositoryURL": "https://github.com/chicio/ID3TagEditor.git",
         "state": {
           "branch": null,
-          "revision": "715fb6a078c989efdb809d6b53df9b3ecc1d709b",
-          "version": "2.0.4"
+          "revision": "48cfd035120bb08ec3763b19e379cde049929f82",
+          "version": "4.1.1"
         }
       }
     ]
