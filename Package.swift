@@ -1,4 +1,4 @@
-// swift-tools-version:5.0
+// swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 // Copyright 2018 Yusuke Ito
@@ -20,11 +20,12 @@ import PackageDescription
 
 let package = Package(
     name: "p90sd-music-db",
+    platforms: [.macOS(.v10_13)],
     dependencies: [
         .package(url: "https://github.com/chicio/ID3TagEditor.git", from: "4.0.0"),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "p90sd-music-db",
             dependencies: ["EDBDatabse", "ID3TagEditor"]),
         .target(
